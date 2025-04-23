@@ -1,0 +1,42 @@
+name: Auto Release
+
+on:
+  push:
+    tags:
+      - '*'  # Triggers on all tags
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get the tag name
+        id: vars
+        run: echo "TAG=${GITHUB_REF##*/}" >> $GITHUB_ENV
+
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Zip repo
+        run: zip -r ${{ env.TAG }}.zip . -x '*.git*'
+
+      - name: Create GitHub release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.TAG }}
+          release_name: Release ${{ env.TAG }}
+          draft: false
+          prerelease: false
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./module-name-${{ env.TAG }}.zip
+          asset_name: module-name-${{ env.TAG }}.zip
+          asset_content_type: application/zip
